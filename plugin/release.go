@@ -142,6 +142,16 @@ func (rc *releaseClient) newRelease() (*github.RepositoryRelease, error) {
 	release, _, err := rc.Client.Repositories.CreateRelease(rc.Context, rc.Owner, rc.Repo, rr)
 
 	if err != nil {
+		if errResponse := err.(*github.ErrorResponse); errResponse != nil {
+			if len(errResponse.Errors) == 1 && errResponse.Errors[0].Code == "already_exists" {
+				release, err = rc.getRelease()
+				if err != nil {
+					return nil, err
+				}
+				fmt.Println("Found existing release found for the given tag")
+				return rc.editRelease(*release)
+			}
+		}
 		return nil, fmt.Errorf("failed to create release: %w", err)
 	}
 
